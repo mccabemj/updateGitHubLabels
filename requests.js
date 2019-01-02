@@ -6,54 +6,57 @@ const config = {
   headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` }
 };
 
-module.exports = {
-  addLabel: async (repoUrl, data) => {
-    try {
-      await axios.post(`${repoUrl}/labels`, data, config);
+const responseError = (err, startMsg) =>
+  `${startMsg} ${
+    err.response && err.response.data && err.response.data.message ? err.response.data.message : ''
+  }`;
 
-      console.log(`added label ${data.name} with color ${data.color} to URL ${repoUrl}`);
-    } catch (err) {
-      console.log(`Unable to get list of labels from Repo ${repoUrl}`);
-      throw Error(err);
-    }
-  },
+const getRepos = async () => {
+  try {
+    const repos = await axios.get(
+      `https://api.github.com/orgs/${process.env.ORG_NAME}/repos`,
+      config
+    );
 
-  deleteLabel: async url => {
-    try {
-      await axios.delete(`${url}`, config);
-
-      console.log(`deleted label with URL ${url}`);
-      return await [];
-    } catch (err) {
-      console.log(`Unable to get list of labels from Repo ${url}`);
-      throw Error(err);
-    }
-  },
-
-  getLabelsForRepo: async url => {
-    try {
-      const labels = await axios.get(`${url}/labels`, config);
-
-      return labels.data.map(x => x.url);
-    } catch (err) {
-      console.log(`Unable to get list of labels from Repo ${url}`);
-      throw Error(err);
-    }
-  },
-
-  getRepos: async () => {
-    try {
-      const repos = await axios.get(
-        `https://api.github.com/orgs/${process.env.ORG_NAME}/repos`,
-        config
-      );
-
-      return repos.data.map(x => x.url);
-    } catch (err) {
-      console.log(
-        `Unable to get list of Repos from GitHub. Please check your access token or Organisation name/access rights`
-      );
-      throw Error(err);
-    }
+    return repos.data.map(x => x.url);
+  } catch (err) {
+    throw Error(responseError(err, `Unable to get list of Repos from GitHub`));
   }
+};
+
+const getLabelsForRepo = async url => {
+  try {
+    const labels = await axios.get(`${url}/labels`, config);
+
+    return labels.data.map(x => x.url);
+  } catch (err) {
+    throw Error(responseError(err, `Unable to get list of labels from Repo ${url}`));
+  }
+};
+
+const addLabel = async (repoUrl, data) => {
+  try {
+    await axios.post(`${repoUrl}/labels`, data, config);
+
+    return `added label ${data.name} with color ${data.color} to URL ${repoUrl}`;
+  } catch (err) {
+    throw Error(responseError(err, `Unable to get list of labels from Repo ${repoUrl}`));
+  }
+};
+
+const deleteLabel = async url => {
+  try {
+    await axios.delete(`${url}`, config);
+
+    return `deleted label with URL ${url}`;
+  } catch (err) {
+    throw Error(responseError(err, `Unable to delete label from URL ${url}`));
+  }
+};
+
+module.exports = {
+  addLabel,
+  deleteLabel,
+  getLabelsForRepo,
+  getRepos
 };
