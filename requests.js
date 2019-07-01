@@ -11,14 +11,23 @@ const responseError = (err, startMsg) =>
     err.response && err.response.data && err.response.data.message ? err.response.data.message : ''
   }`;
 
-const getRepos = async () => {
+const getRepos = async url => {
   try {
-    const repos = await axios.get(
-      `https://api.github.com/orgs/${process.env.ORG_NAME}/repos`,
-      config
-    );
+    const repos = await axios.get(url, config);
 
-    return repos.data.map(x => x.url);
+    const { link } = repos.headers;
+    let nextUrl = null;
+    if (link) {
+      const theNext = link.split(',').filter(x => x.includes('rel="next"'));
+      if (theNext.length > 0) {
+        nextUrl = theNext[0].replace('<', '').replace('>; rel="next"', '');
+      }
+    }
+
+    return {
+      urls: repos.data.map(x => x.url),
+      nextUrl
+    };
   } catch (err) {
     throw Error(responseError(err, `Unable to get list of Repos from GitHub`));
   }

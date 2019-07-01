@@ -8,7 +8,9 @@ const newLabels = [
   { name: 'improvement', color: '00FBFF', description: 'Improvement' }, // light blue
   { name: 'customer request', color: '00FF78', description: 'Customer Request' }, // green
   { name: 'discussion', color: 'A600FF', description: 'Discussion' }, // purple
-  { name: 'on-hold', color: 'B3B3B3', description: 'On Hold' } // orange
+  { name: 'on-hold', color: 'B3B3B3', description: 'On Hold' }, // orange
+  { name: 'feature', color: '459cbc', description: 'Feature' }, // dark blue
+  { name: 'to-do', color: '2555e8', description: 'to-do' } // dark blue
 ];
 
 const go = async () => {
@@ -16,7 +18,16 @@ const go = async () => {
     console.log(colors.blue.underline('Starting'));
 
     // get all repos
-    const repos = await requests.getRepos();
+    // note that it comes back with a "next" URL if there are more than 30, so need to keep querying until found all
+    let url = `https://api.github.com/orgs/${process.env.ORG_NAME}/repos`;
+    let repos = [];
+    let nextUrl = true;
+    while (nextUrl) {
+      const getAll = await requests.getRepos(url); // eslint-disable-line
+      repos = [...repos, ...getAll.urls];
+      nextUrl = !!getAll.nextUrl;
+      url = getAll.nextUrl;
+    }
 
     console.log(colors.blue(`Retrieved ${repos.length} Repositorys`));
 
@@ -30,7 +41,7 @@ const go = async () => {
     );
 
     // delete labels 1 by 1
-    const deleteLabels = allLabels.map(url => requests.deleteLabel(url));
+    const deleteLabels = allLabels.map(del => requests.deleteLabel(del));
     const successfulDeletes = await Promise.all(deleteLabels);
 
     // add our new labels to each repo (again, 1 by 1)
